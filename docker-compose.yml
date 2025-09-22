@@ -1,5 +1,3 @@
-version: '3.10'
-
 services:
   backend:
     build: 
@@ -8,4 +6,8 @@ services:
     ports:
       - "5001:5001"
     environment:
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - WCS_URL=${WCS_URL}
+      - WCS_API_KEY=${WCS_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
       # key env variable add separatly
