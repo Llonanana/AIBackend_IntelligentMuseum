@@ -4,7 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "5001:5001"
+      - "5050:5050"
     environment:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       - WCS_URL=${WCS_URL}

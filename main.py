@@ -16,4 +16,4 @@ def index():
 
 if __name__ == "__main__":
     # 0.0.0.0 make flask use all available network interfaces
-    app.run(host='0.0.0.0', port=5001, debug=debug_mode)  
+    app.run(host='0.0.0.0', port=5050, debug=debug_mode)  
