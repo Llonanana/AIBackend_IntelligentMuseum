@@ -14,3 +14,4 @@ llama-index
 weaviate-client
 llama-index-vector-stores-weaviate
 Babel
+google-cloud-translate

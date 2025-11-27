@@ -1,36 +1,37 @@
 from dotenv import load_dotenv
 import os
-import requests
 from babel import Locale
+from google.cloud import translate_v2 as translate
 
 class Translate:
     def __init__(self):
         load_dotenv()
         self.google_api_key = os.getenv('GOOGLE_API_KEY')
-        self.api_base = "https://translation.googleapis.com/language/translate/v2"
+        self.client = translate.Client()
 
     def detect_language(self, text):
         """Detects the text's language."""
         # use the nmt model to translate for free 500K characters per month
-        url = f"https://translation.googleapis.com/language/translate/v2/detect?key={self.google_api_key}"
-        response = requests.post(url, data={
-            "q": text
-        })
-
-        data = response.json()
-        detect_lang = data["data"]["detections"][0][0]["language"]
-
-        return detect_lang
+        
+        result = self.client.detect_language(text)
+        return result['language']
 
     def translate(self, text, target_language):
         # use the nmt model to translate for free 500K characters per month
-        url = f"{self.api_base}?q={text}&target={target_language}&model=nmt&key={self.google_api_key}"
-        response = requests.get(url)
+        try:
+            result = self.client.translate(
+                values=text,
+                target_language=target_language,
+                format_="text",  # 可選 text/html
+                model="nmt"      # 強制使用 NMT 模型
+            )
 
-        data = response.json()
-        translated_text = data["data"]["translations"][0]["translatedText"]
+            return result["translatedText"]
+        except Exception as e:
+            print("Error during translation:", e)
+            return None
+        
 
-        return translated_text
     
     def get_language_name_in_chinese(self, language_code):
         try:
