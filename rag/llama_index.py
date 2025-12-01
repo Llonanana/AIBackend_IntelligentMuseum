@@ -72,7 +72,7 @@ class LLaMAIndexRAG(RAGInterface):
         nodes = node_parser.get_nodes_from_documents(documents)
 
         # Build Index (VectorDB)
-        client = weaviate.connect_to_local(
+        self.client = weaviate.connect_to_local(
             host="weaviate",  # 如果直接在主機跑，改成 "localhost"
             port=8080,
             grpc_port=50051,  # 如果沒有開 gRPC 可以省略
@@ -130,6 +130,13 @@ class LLaMAIndexRAG(RAGInterface):
         self.openai_api_key = os.getenv('OPENAI_API_KEY')
         self.openai_client = openai.OpenAI(api_key=self.openai_api_key)
 
+    def __del__(self):
+        """Destructor，在物件被 Python 回收時自動關閉 Weaviate client"""
+        try:
+            self.client.close()
+        except:
+            pass
+    
     def generate_response(self, question):
         pass
     
