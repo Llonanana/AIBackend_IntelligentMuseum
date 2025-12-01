@@ -84,7 +84,7 @@ class LLaMAIndexRAG(RAGInterface):
         # Construct vector store
         index_name = "Museum_index"
         vector_store = WeaviateVectorStore(
-            weaviate_client = client, 
+            weaviate_client = self.client, 
             index_name = index_name
         )
 
