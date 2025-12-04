@@ -4,7 +4,7 @@
 #chromadb
 #sentence-transformers
 python-dotenv
-langchain
+langchain==0.0.354
 langchain_community
 Flask
 gunicorn # heroku
