@@ -96,7 +96,7 @@ def npc_ask():
 
     # Translate to Chinese and plug in target language to the prompt
     translator = Translate()
-    chi_query = translator.translate(query, "zh-TW")
+    chi_query = translator.translate(query, "zh_TW")
 
     lang_chinese_name = translator.get_language_name_in_chinese(lang)
     if lang_chinese_name is None:
