@@ -150,17 +150,11 @@ def npc_ask():
     rag = LLaMAIndexRAG()
     response = rag.generate_response_with_retrieval(query_info)
 
-    if is_rag:
-        response_text, metadata = response.response, response.metadata
-    else:
-        response_text, metadata = response["response"], response["metadata"]
+    response_text, metadata = response["response"], response["metadata"]
 
     # End timing after the API call
     end_time = time.time()
     total_time = end_time - start_time
-
-    print("NPC ROLE:", npc_role, "ROLE FEATURES:", role_features)
-
 
     return jsonify({
         'parsed_query': chi_query,
