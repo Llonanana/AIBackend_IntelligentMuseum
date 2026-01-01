@@ -9,14 +9,14 @@ import time
 api = Blueprint('api', __name__)
 
 # Load roles configuration from JSON file
-with open('npc_role_config.json', 'r') as f:
-    roles_config = json.load(f)
+# with open('npc_role_config.json', 'r') as f:
+#     roles_config = json.load(f)
 
 # 替換讀取json檔案的方式(即時更新)
-# def get_role_features(role):
-#     with open('npc_role_config.json', 'r') as f:
-#         roles_config = json.load(f)
-#     return roles_config.get(role, {})
+def get_role_features(role):
+    with open('npc_role_config.json', 'r') as f:
+        roles_config = json.load(f)
+    return roles_config.get(role, {})
 # 後面替換：
 # role_features = get_role_features(npc_role)
 # dynasty = role_features.get("dynasty", "現代")    
@@ -52,7 +52,9 @@ def generate():
 
     # 預設AI助理使用博物館導覽員
     role = '博物館導覽員'
-    role_features = roles_config.get(role, {})
+    # role_features = roles_config.get(role, {})
+    role_features = get_role_features(role)
+    
     tone = role_features.get("tone", "中立")
     style = role_features.get("style", "正常")
     background = role_features.get("background", "")
@@ -115,7 +117,9 @@ def npc_ask():
     # chi_query += f"。請用'{lang_chinese_name}'回答"
 
     # Get the role features
-    role_features = roles_config.get(npc_role, {})
+    # role_features = roles_config.get(npc_role, {})
+    role_features = get_role_features(npc_role)
+
     tone = role_features.get("tone", "中立")
     style = role_features.get("style", "正常")
     background = role_features.get("background", "")
@@ -154,6 +158,8 @@ def npc_ask():
     # End timing after the API call
     end_time = time.time()
     total_time = end_time - start_time
+
+    print("NPC ROLE:", npc_role, "ROLE FEATURES:", role_features)
 
 
     return jsonify({
