@@ -12,6 +12,15 @@ api = Blueprint('api', __name__)
 with open('npc_role_config.json', 'r') as f:
     roles_config = json.load(f)
 
+# 替換讀取json檔案的方式(即時更新)
+# def get_role_features(role):
+#     with open('npc_role_config.json', 'r') as f:
+#         roles_config = json.load(f)
+#     return roles_config.get(role, {})
+# 後面替換：
+# role_features = get_role_features(npc_role)
+# dynasty = role_features.get("dynasty", "現代")    
+
 # AI助理
 @api.route('/generate', methods=['POST'])
 def generate():
