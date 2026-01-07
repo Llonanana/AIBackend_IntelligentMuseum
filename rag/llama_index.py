@@ -155,11 +155,11 @@ class LLaMAIndexRAG(RAGInterface):
         is_rag = query_info['is_rag']
 
         qa_prompt_str = ""
-        if query_info['role'] == "博物館導覽員":
+        if query_info['npc_role'] == "博物館導覽員":
             qa_prompt_str = (
                 f"{personality_prompt} \n"
 
-                f"你現在的身份是：{query_info['role']}\n"
+                f"你現在的身份是：{query_info['npc_role']}\n"
                 f"你的背景資訊是：{query_info['background']}\n"
                 f"你回覆的語調是：{query_info['tone']}\n"
                 f"你的回覆風格是：{query_info['style']}\n"
@@ -206,7 +206,7 @@ class LLaMAIndexRAG(RAGInterface):
                     f"{personality_prompt} \n"
 
                     "# 你的身份 \n"
-                    f"你現在的身份是：{query_info['role']}\n"
+                    f"你現在的身份是：{query_info['npc_role']}\n"
                     f"你所身處的朝代是：{query_info['dynasty']} (請不要回答超過你朝代的問題或資訊)\n"
                     f"你的背景資訊是：{query_info['background']}\n"
                     # f"你回覆的語調是：{query_info['tone']}\n"
@@ -231,7 +231,7 @@ class LLaMAIndexRAG(RAGInterface):
                 qa_prompt_str = (
                     f"{personality_prompt} \n"
 
-                    f"你現在的身份是：{query_info['role']}\n"
+                    f"你現在的身份是：{query_info['npc_role']}\n"
                     f"你所身處的朝代是：{query_info['dynasty']} (請不要回答超過你朝代的問題或資訊)\n"
                     f"你的背景資訊是：{query_info['background']}\n"
                     # f"你回覆的語調是：{query_info['tone']}\n"
@@ -285,7 +285,7 @@ class LLaMAIndexRAG(RAGInterface):
         if is_rag:
             # 動態更新 search_kwargs
             self.query_engine.retriever.search_kwargs = {
-                "where": {"path": ["npc"], "operator": "Equal", "valueText": query_info['role']}
+                "where": {"path": ["npc"], "operator": "Equal", "valueText": query_info['npc_role']}
             }            
             retrieval_start_time = time.time()
             retrieved_nodes = self.query_engine.retriever.retrieve(query_info['query'])
@@ -312,7 +312,7 @@ class LLaMAIndexRAG(RAGInterface):
             response_data = {
                 "RAG_response_time": retrieval_end_time - retrieval_start_time,
                 "metadata": metadata_dict,  # 這裡保留了每個展品完整資訊
-                "parsed_query": f"({query_info['role']}-{query_info['dynasty']}){query_info['query']}",
+                "parsed_query": f"({query_info['npc_role']}-{query_info['dynasty']}){query_info['query']}",
                 "response": response.response  # 如果是非 RAG，改成 response['response']
             }
 
