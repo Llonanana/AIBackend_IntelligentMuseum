@@ -9,8 +9,17 @@ import time
 api = Blueprint('api', __name__)
 
 # Load roles configuration from JSON file
-with open('npc_role_config.json', 'r') as f:
-    roles_config = json.load(f)
+# with open('npc_role_config.json', 'r') as f:
+#     roles_config = json.load(f)
+
+# 替換讀取json檔案的方式(即時更新)
+def get_role_features(npc_role):
+    with open('npc_role_config.json', 'r') as f:
+        roles_config = json.load(f)
+    return roles_config.get(npc_role, {})
+# 後面替換：
+# role_features = get_role_features(npc_role)
+# dynasty = role_features.get("dynasty", "現代")    
 
 # AI助理
 @api.route('/generate', methods=['POST'])
@@ -42,8 +51,10 @@ def generate():
     # chi_query += f"。請用{lang_chinese_name}回答"
 
     # 預設AI助理使用博物館導覽員
-    role = '博物館導覽員'
-    role_features = roles_config.get(role, {})
+    npc_role = '博物館導覽員'
+    # role_features = roles_config.get(npc_role, {})
+    role_features = get_role_features(npc_role)
+    
     tone = role_features.get("tone", "中立")
     style = role_features.get("style", "正常")
     background = role_features.get("background", "")
@@ -53,7 +64,7 @@ def generate():
         'query': chi_query,
         'target_lang_code': lang,
         'target_lang': lang_chinese_name,
-        'role': role,
+        'npc_role': npc_role,
         'dynasty': dynasty,
         'background': background,
         'tone': tone,
@@ -96,7 +107,7 @@ def npc_ask():
 
     # Translate to Chinese and plug in target language to the prompt
     translator = Translate()
-    chi_query = translator.translate(query, "zh-TW")
+    chi_query = translator.translate(query, "zh_TW")
 
     lang_chinese_name = translator.get_language_name_in_chinese(lang)
     if lang_chinese_name is None:
@@ -106,7 +117,9 @@ def npc_ask():
     # chi_query += f"。請用'{lang_chinese_name}'回答"
 
     # Get the role features
-    role_features = roles_config.get(npc_role, {})
+    # role_features = roles_config.get(npc_role, {})
+    role_features = get_role_features(npc_role)
+
     tone = role_features.get("tone", "中立")
     style = role_features.get("style", "正常")
     background = role_features.get("background", "")
@@ -121,7 +134,7 @@ def npc_ask():
         'query': chi_query,
         'target_lang_code': lang,
         'target_lang': lang_chinese_name,
-        'role': npc_role,
+        'npc_role': npc_role,
         'dynasty': dynasty,
         'background': background,
         'tone': tone,
@@ -137,15 +150,11 @@ def npc_ask():
     rag = LLaMAIndexRAG()
     response = rag.generate_response_with_retrieval(query_info)
 
-    if is_rag:
-        response_text, metadata = response.response, response.metadata
-    else:
-        response_text, metadata = response["response"], response["metadata"]
+    response_text, metadata = response["response"], response["metadata"]
 
     # End timing after the API call
     end_time = time.time()
     total_time = end_time - start_time
-
 
     return jsonify({
         'parsed_query': chi_query,

@@ -48,12 +48,18 @@ class LLaMAIndexRAG(RAGInterface):
         )  
         Settings.embed_model = OpenAIEmbedding() 
         
+        npc_map = {
+            "清_瓶_青瓷紙槌瓶.txt": "乾隆帝(愛新覺羅·弘曆)",
+            "宋_碗_青瓷蓮花式溫碗.txt": "宋徽宗(趙佶)",
+        }
+        
         # Load data
         filename_fn = lambda filename: {
             "file_name": filename,
+            "npc": npc_map.get(filename.split("/")[-1], "古代中國官員"),  # 這裡對應 NPC
             "dynasty": filename.split("/")[-1].split("_")[0],
             "weapon_type": filename.split("/")[-1].split("_")[1],
-            "title": filename.split("/")[-1].split("_")[2].replace(".txt", ""),
+            "title": filename.split("/")[-1].split("_")[2].replace(".txt", "")
         }
 
         ########### INDEXING ###########
@@ -72,7 +78,7 @@ class LLaMAIndexRAG(RAGInterface):
         nodes = node_parser.get_nodes_from_documents(documents)
 
         # Build Index (VectorDB)
-        client = weaviate.connect_to_local(
+        self.client = weaviate.connect_to_local(
             host="weaviate",  # 如果直接在主機跑，改成 "localhost"
             port=8080,
             grpc_port=50051,  # 如果沒有開 gRPC 可以省略
@@ -84,7 +90,7 @@ class LLaMAIndexRAG(RAGInterface):
         # Construct vector store
         index_name = "Museum_index"
         vector_store = WeaviateVectorStore(
-            weaviate_client = client, 
+            weaviate_client = self.client, 
             index_name = index_name
         )
 
@@ -111,6 +117,9 @@ class LLaMAIndexRAG(RAGInterface):
         retriever = VectorIndexRetriever(
             index=index,
             similarity_top_k=3,
+            # 如果用 WeaviateVectorStore，可以在 query kwargs 加 filter
+            # 這裡示範 filter 依 NPC
+            search_kwargs={"where": {"path": ["npc"], "operator": "Equal", "valueText": "中國古代官員"}}
         )
         
         # configure response synthesizer
@@ -130,6 +139,13 @@ class LLaMAIndexRAG(RAGInterface):
         self.openai_api_key = os.getenv('OPENAI_API_KEY')
         self.openai_client = openai.OpenAI(api_key=self.openai_api_key)
 
+    def __del__(self):
+        """Destructor，在物件被 Python 回收時自動關閉 Weaviate client"""
+        try:
+            self.client.close()
+        except:
+            pass
+    
     def generate_response(self, question):
         pass
     
@@ -139,11 +155,11 @@ class LLaMAIndexRAG(RAGInterface):
         is_rag = query_info['is_rag']
 
         qa_prompt_str = ""
-        if query_info['role'] == "博物館導覽員":
+        if query_info['npc_role'] == "博物館導覽員":
             qa_prompt_str = (
                 f"{personality_prompt} \n"
 
-                f"你現在的身份是：{query_info['role']}\n"
+                f"你現在的身份是：{query_info['npc_role']}\n"
                 f"你的背景資訊是：{query_info['background']}\n"
                 f"你回覆的語調是：{query_info['tone']}\n"
                 f"你的回覆風格是：{query_info['style']}\n"
@@ -190,7 +206,7 @@ class LLaMAIndexRAG(RAGInterface):
                     f"{personality_prompt} \n"
 
                     "# 你的身份 \n"
-                    f"你現在的身份是：{query_info['role']}\n"
+                    f"你現在的身份是：{query_info['npc_role']}\n"
                     f"你所身處的朝代是：{query_info['dynasty']} (請不要回答超過你朝代的問題或資訊)\n"
                     f"你的背景資訊是：{query_info['background']}\n"
                     # f"你回覆的語調是：{query_info['tone']}\n"
@@ -207,7 +223,7 @@ class LLaMAIndexRAG(RAGInterface):
                     "# 問題： \n"
                     "{query_str} \n"
 
-                    f"請將你的回答翻譯成'{query_info['target_lang']}'\n"
+                    f"請將你的回答以'{query_info['target_lang']}'的語言進行\n"
                     "\n"
                     "# 回答： \n"
                 )
@@ -215,7 +231,7 @@ class LLaMAIndexRAG(RAGInterface):
                 qa_prompt_str = (
                     f"{personality_prompt} \n"
 
-                    f"你現在的身份是：{query_info['role']}\n"
+                    f"你現在的身份是：{query_info['npc_role']}\n"
                     f"你所身處的朝代是：{query_info['dynasty']} (請不要回答超過你朝代的問題或資訊)\n"
                     f"你的背景資訊是：{query_info['background']}\n"
                     # f"你回覆的語調是：{query_info['tone']}\n"
@@ -250,7 +266,7 @@ class LLaMAIndexRAG(RAGInterface):
             "------------\n"
             "根據新的上下文，改進原始答案以更好地回答問題。如果上下文沒有幫助，請返回原始答案。\n"
 
-            f"務必將你的回答翻譯成'{query_info['target_lang']}'\n"
+            f"務必將你的回答以'{query_info['target_lang']}'的語言進行\n"
 
             "改進後的回答："
         )
@@ -267,17 +283,24 @@ class LLaMAIndexRAG(RAGInterface):
         logger.info(f"Start of Processing "+"="*10)
         # Timing retrieval
         if is_rag:
+            # 動態更新 search_kwargs
+            self.query_engine.retriever.search_kwargs = {
+                "where": {"path": ["npc"], "operator": "Equal", "valueText": query_info['npc_role']}
+            }            
             retrieval_start_time = time.time()
             retrieved_nodes = self.query_engine.retriever.retrieve(query_info['query'])
             retrieval_end_time = time.time()
 
             logger.info(f"User's Query: {query_info['query']}")
             # From llamaindex's implementation
-            context_str = "\n\n".join([r.get_content() for r in retrieved_nodes])
+            context_str = "\n\n".join([nws.node.get_content() for nws in retrieved_nodes])
             synthesized_prompt = qa_prompt_str.format(
                 context_str=context_str, query_str=query_info['query']
             )
             logger.info(f"Synthesized Prompt:\n{synthesized_prompt}")
+
+            # 取得 NodeWithScore 的原始 Node metadata
+            metadata_dict = {nws.node.ref_doc_id: nws.node.metadata for nws in retrieved_nodes}
 
             synthesis_start_time = time.time()
             response = self.query_engine._response_synthesizer.synthesize(
@@ -286,9 +309,18 @@ class LLaMAIndexRAG(RAGInterface):
             )
             synthesis_end_time = time.time()
 
+            response_data = {
+                "RAG_response_time": retrieval_end_time - retrieval_start_time,
+                "metadata": metadata_dict,  # 這裡保留了每個展品完整資訊
+                "parsed_query": f"({query_info['npc_role']}-{query_info['dynasty']}){query_info['query']}",
+                "response": response.response  # 如果是非 RAG，改成 response['response']
+            }
+
             logger.info(f"LLM's Response:\n{response}")
             logger.info(f"Retrieval time: {retrieval_end_time - retrieval_start_time:.2f} seconds")
             logger.info(f"Generation time: {synthesis_end_time - synthesis_start_time:.2f} seconds")
+            
+            return response_data
         else:
             # Query the LLM directly
             generation_start_time = time.time()
