@@ -195,7 +195,7 @@ class LLaMAIndexRAG(RAGInterface):
 
                 "問題：{query_str}\n"
 
-                f"請用'{query_info['target_lang']}'的語言回答\n"
+                f"對方可能為外國人，所以請用'{query_info['target_lang']}'的語言回答\n"
 
                 "回答："
             )
@@ -223,7 +223,7 @@ class LLaMAIndexRAG(RAGInterface):
                     "# 問題： \n"
                     "{query_str} \n"
 
-                    f"請將你的回答以'{query_info['target_lang']}'的語言進行\n"
+                    f"對方可能為外國人，所以請將你的回答以'{query_info['target_lang']}'的語言進行\n"
                     "\n"
                     "# 回答： \n"
                 )
@@ -242,7 +242,7 @@ class LLaMAIndexRAG(RAGInterface):
 
                     f"問題：{query_info['query']}\n"
 
-                    # f"請將你的回答翻譯成'{query_info['target_lang']}'\n"
+                    # f"對方可能為外國人，所以請將你的回答翻譯成'{query_info['target_lang']}'\n"
 
                     "回答："
                 )
@@ -266,7 +266,7 @@ class LLaMAIndexRAG(RAGInterface):
             "------------\n"
             "根據新的上下文，改進原始答案以更好地回答問題。如果上下文沒有幫助，請返回原始答案。\n"
 
-            f"務必將你的回答以'{query_info['target_lang']}'的語言進行\n"
+            f"對方可能為外國人，所以務必將你的回答以'{query_info['target_lang']}'的語言進行\n"
 
             "改進後的回答："
         )
