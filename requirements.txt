@@ -10,8 +10,9 @@ langchain-text-splitters
 Flask
 gunicorn # heroku
 openai
-llama-index
-weaviate-client
-llama-index-vector-stores-weaviate
+llama-index==0.14.7
+weaviate-client==4.17.0
+llama-index-vector-stores-weaviate==1.6.0
 Babel
-google-cloud-translate
+google-cloud-translate==3.24.0
+protobuf==4.25.3

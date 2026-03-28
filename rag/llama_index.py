@@ -195,7 +195,7 @@ class LLaMAIndexRAG(RAGInterface):
 
                 "問題：{query_str}\n"
 
-                # f"請將你的回答翻譯成'{query_info['target_lang']}'\n"
+                f"對方可能為外國人，所以請用'{query_info['target_lang']}'的語言回答\n"
 
                 "回答："
             )
@@ -223,7 +223,7 @@ class LLaMAIndexRAG(RAGInterface):
                     "# 問題： \n"
                     "{query_str} \n"
 
-                    f"請將你的回答以'{query_info['target_lang']}'的語言進行\n"
+                    f"對方可能為外國人，所以請將你的回答以'{query_info['target_lang']}'的語言進行\n"
                     "\n"
                     "# 回答： \n"
                 )
@@ -242,7 +242,7 @@ class LLaMAIndexRAG(RAGInterface):
 
                     f"問題：{query_info['query']}\n"
 
-                    # f"請將你的回答翻譯成'{query_info['target_lang']}'\n"
+                    # f"對方可能為外國人，所以請將你的回答翻譯成'{query_info['target_lang']}'\n"
 
                     "回答："
                 )
@@ -266,7 +266,7 @@ class LLaMAIndexRAG(RAGInterface):
             "------------\n"
             "根據新的上下文，改進原始答案以更好地回答問題。如果上下文沒有幫助，請返回原始答案。\n"
 
-            f"務必將你的回答以'{query_info['target_lang']}'的語言進行\n"
+            f"對方可能為外國人，所以務必將你的回答以'{query_info['target_lang']}'的語言進行\n"
 
             "改進後的回答："
         )
@@ -309,11 +309,14 @@ class LLaMAIndexRAG(RAGInterface):
             )
             synthesis_end_time = time.time()
 
+            response_obj = response  # 這是 LlamaIndex 物件
+            response_text = response_obj.response
+
             response_data = {
-                "RAG_response_time": retrieval_end_time - retrieval_start_time,
-                "metadata": metadata_dict,  # 這裡保留了每個展品完整資訊
+                "response": response_text,
+                "metadata": metadata_dict,
                 "parsed_query": f"({query_info['npc_role']}-{query_info['dynasty']}){query_info['query']}",
-                "response": response.response  # 如果是非 RAG，改成 response['response']
+                "RAG_response_time": retrieval_end_time - retrieval_start_time
             }
 
             logger.info(f"LLM's Response:\n{response}")

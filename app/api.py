@@ -30,31 +30,22 @@ def generate():
     """
     data = request.json
     query = data.get('query', '')
-    lang = data.get('lang', 'en')
+    lang = data.get('lang', 'en_US')
     personality = data.get("personality", "")
 
     if query.strip() == '':
-        return jsonify({
-            'error': 'Query field is required'
-        })
-    
+        return jsonify({'error': 'Query field is required'})
+
     ########## Detect and Translate ##########
-    # Translate to Chinese and plug in target language to the prompt
     translator = Translate()
-    chi_query = translator.translate(query, "zh-TW")
+    chi_query = translator.translate(query, "zh_TW")
 
     lang_chinese_name = translator.get_language_name_in_chinese(lang)
     if lang_chinese_name is None:
-        return jsonify({
-            'error': 'Error in your language code. Please use a valid language code.'
-        })
-    # chi_query += f"。請用{lang_chinese_name}回答"
+        return jsonify({'error': 'Invalid language code'})
 
-    # 預設AI助理使用博物館導覽員
     npc_role = '博物館導覽員'
-    # role_features = roles_config.get(npc_role, {})
     role_features = get_role_features(npc_role)
-    
     tone = role_features.get("tone", "中立")
     style = role_features.get("style", "正常")
     background = role_features.get("background", "")
@@ -70,24 +61,19 @@ def generate():
         'tone': tone,
         'style': style,
         'personality': personality,
-        'is_rag': True  # Default to RAG
+        'is_rag': True
     }
 
     ########## LLaMA Index RAG ##########
-    # Start timing before the API call
     start_time = time.time()
-
     rag = LLaMAIndexRAG()
     response = rag.generate_response_with_retrieval(query_info)
-    response_text, metadata = response.response, response.metadata
 
-    # End timing after the API call
+    response_text = response.get("response", "")
+    metadata = response.get("metadata", {})
+
     end_time = time.time()
     total_time = end_time - start_time
-
-    # Google translate doesn't work well for specific terms
-    # translator = Translate()
-    # response_text = translator.translate(response_text, lang)
 
     return jsonify({
         'parsed_query': chi_query,
@@ -95,6 +81,7 @@ def generate():
         'metadata': metadata,
         'RAG_response_time': total_time
     })
+
 
 @api.route('/npc/ask', methods=['POST'])
 def npc_ask():
