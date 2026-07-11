@@ -1,25 +1,11 @@
 from flask import Blueprint, request, jsonify
-from rag.llama_index import LLaMAIndexRAG
 
 from app.services.translate_service import Translate
+from app.services.npc_service import ask_npc
 
-import json
 import time
 
 api = Blueprint('api', __name__)
-
-# Load roles configuration from JSON file
-# with open('npc_role_config.json', 'r') as f:
-#     roles_config = json.load(f)
-
-# 替換讀取json檔案的方式(即時更新)
-def get_role_features(npc_role):
-    with open('npc_role_config.json', 'r') as f:
-        roles_config = json.load(f)
-    return roles_config.get(npc_role, {})
-# 後面替換：
-# role_features = get_role_features(npc_role)
-# dynasty = role_features.get("dynasty", "現代")    
 
 # AI助理
 @api.route('/generate', methods=['POST'])
@@ -27,6 +13,10 @@ def generate():
     """
     Endpoint to generate responses using the RAG model.
     Expects a JSON payload with a 'query' field.
+
+    Stateless / single-turn: no conversation history. Use the socket.io
+    "join" + "send_chat_message" events (see app/socket_events.py) for
+    multi-turn chat with memory.
     """
     data = request.json
     query = data.get('query', '')
@@ -36,55 +26,34 @@ def generate():
     if query.strip() == '':
         return jsonify({'error': 'Query field is required'})
 
-    ########## Detect and Translate ##########
-    translator = Translate()
-    chi_query = translator.translate(query, "zh_TW")
-
-    lang_chinese_name = translator.get_language_name_in_chinese(lang)
-    if lang_chinese_name is None:
-        return jsonify({'error': 'Invalid language code'})
-
-    npc_role = '博物館導覽員'
-    role_features = get_role_features(npc_role)
-    tone = role_features.get("tone", "中立")
-    style = role_features.get("style", "正常")
-    background = role_features.get("background", "")
-    dynasty = role_features.get("dynasty", "現代")
-
-    query_info = {
-        'query': chi_query,
-        'target_lang_code': lang,
-        'target_lang': lang_chinese_name,
-        'npc_role': npc_role,
-        'dynasty': dynasty,
-        'background': background,
-        'tone': tone,
-        'style': style,
-        'personality': personality,
-        'is_rag': True
-    }
-
-    ########## LLaMA Index RAG ##########
     start_time = time.time()
-    rag = LLaMAIndexRAG()
-    response = rag.generate_response_with_retrieval(query_info)
-
-    response_text = response.get("response", "")
-    metadata = response.get("metadata", {})
-
-    end_time = time.time()
-    total_time = end_time - start_time
+    try:
+        result = ask_npc(
+            query=query,
+            lang=lang,
+            npc_role='博物館導覽員',
+            personality=personality,
+            is_rag=True,
+        )
+    except ValueError:
+        return jsonify({'error': 'Invalid language code'})
+    total_time = time.time() - start_time
 
     return jsonify({
-        'parsed_query': chi_query,
-        'response': response_text,
-        'metadata': metadata,
+        'parsed_query': result['parsed_query'],
+        'response': result['response'],
+        'metadata': result['metadata'],
         'RAG_response_time': total_time
     })
 
 
 @api.route('/npc/ask', methods=['POST'])
 def npc_ask():
+    """
+    Stateless / single-turn NPC query, kept for backward compatibility.
+    Use the socket.io "join" + "send_chat_message" events for multi-turn
+    chat with memory.
+    """
     data = request.json
     query = data.get('query', '')
     lang = data.get('lang', 'en')
@@ -92,61 +61,25 @@ def npc_ask():
     personality = data.get("personality", "")
     is_rag = data.get("is_rag", True)
 
-    # Translate to Chinese and plug in target language to the prompt
-    translator = Translate()
-    chi_query = translator.translate(query, "zh_TW")
-
-    lang_chinese_name = translator.get_language_name_in_chinese(lang)
-    if lang_chinese_name is None:
+    start_time = time.time()
+    try:
+        result = ask_npc(
+            query=query,
+            lang=lang,
+            npc_role=npc_role,
+            personality=personality,
+            is_rag=is_rag,
+        )
+    except ValueError:
         return jsonify({
             'error': 'Error in your language code. Please use a valid language code.'
         })
-    # chi_query += f"。請用'{lang_chinese_name}'回答"
-
-    # Get the role features
-    # role_features = roles_config.get(npc_role, {})
-    role_features = get_role_features(npc_role)
-
-    tone = role_features.get("tone", "中立")
-    style = role_features.get("style", "正常")
-    background = role_features.get("background", "")
-    dynasty = role_features.get("dynasty", "現代")
-    
-    # Apply the role features to the query
-    # 讓NPC query內多加一點NPC的資訊，這樣retrive document會更準確（和prompt template無關）
-    # 這邊的資訊要和document相關，例如朝代
-    chi_query = f"({npc_role}-{dynasty})"+chi_query
-
-    query_info = {
-        'query': chi_query,
-        'target_lang_code': lang,
-        'target_lang': lang_chinese_name,
-        'npc_role': npc_role,
-        'dynasty': dynasty,
-        'background': background,
-        'tone': tone,
-        'style': style,
-        'personality': personality,
-        "is_rag": is_rag
-    }
-
-
-    # Start timing before the API call
-    start_time = time.time()
-
-    rag = LLaMAIndexRAG()
-    response = rag.generate_response_with_retrieval(query_info)
-
-    response_text, metadata = response["response"], response["metadata"]
-
-    # End timing after the API call
-    end_time = time.time()
-    total_time = end_time - start_time
+    total_time = time.time() - start_time
 
     return jsonify({
-        'parsed_query': chi_query,
-        'response': response_text,
-        'metadata': metadata,
+        'parsed_query': result['parsed_query'],
+        'response': result['response'],
+        'metadata': result['metadata'],
         'RAG_response_time': total_time
     })
 
@@ -166,13 +99,13 @@ def translate():
 ########## ARCHIVED ##########
 ########## LangChain RAG ##########
 # # Set up vector store
-# loader = DirectoryLoader(path="assets", glob="./*.txt", loader_cls=TextLoader) 
+# loader = DirectoryLoader(path="assets", glob="./*.txt", loader_cls=TextLoader)
 # text_splitter = RecursiveCharacterTextSplitter(chunk_size=1024, chunk_overlap=20)
 
 # model_name = "sentence-transformers/all-MiniLM-L6-v2"
 # model_kwargs = {'device': 'cpu'}
 # embedding = HuggingFaceEmbeddings(
-#     model_name=model_name, 
+#     model_name=model_name,
 #     model_kwargs=model_kwargs
 # )
 

@@ -4,6 +4,8 @@
 #chromadb
 #sentence-transformers
 python-dotenv
+Flask-SocketIO
+simple-websocket # gives Flask-SocketIO real WebSocket support without eventlet/gevent
 langchain==0.1.20
 langchain-community==0.0.38
 langchain-text-splitters
