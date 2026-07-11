@@ -5,12 +5,13 @@ import time
 class ChatSession:
     """Conversation state for a single chat room (may hold multiple members)."""
 
-    def __init__(self, room_id, npc_role, personality, lang, is_rag):
+    def __init__(self, room_id, npc_role, personality, lang, is_rag, success_keyword=None):
         self.room_id = room_id
         self.npc_role = npc_role
         self.personality = personality
         self.lang = lang
         self.is_rag = is_rag
+        self.success_keyword = success_keyword  # LLM-judged story-mode success condition, if any
         self.members = {}  # sid -> user_name
         self.history = []  # [{"role": "user"|"npc", "sender": str, "content": str}]
         self.created_at = time.time()
@@ -33,11 +34,11 @@ class SessionService:
         self._lock = threading.Lock()
         self.history_limit = history_limit
 
-    def join(self, sid, room_id, user_name, npc_role, lang, personality, is_rag):
+    def join(self, sid, room_id, user_name, npc_role, lang, personality, is_rag, success_keyword=None):
         with self._lock:
             session = self._rooms.get(room_id)
             if session is None:
-                session = ChatSession(room_id, npc_role, personality, lang, is_rag)
+                session = ChatSession(room_id, npc_role, personality, lang, is_rag, success_keyword)
                 self._rooms[room_id] = session
             session.members[sid] = user_name
             self._sid_to_room[sid] = room_id

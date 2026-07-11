@@ -33,9 +33,10 @@ def register_socket_events(socketio):
         lang = data.get('lang', 'zh-TW')
         personality = data.get('personality', '')
         is_rag = data.get('is_rag', True)
+        success_keyword = data.get('success_keyword') or None
 
         join_room(room_id)
-        session_service.join(sid, room_id, user_name, npc_role, lang, personality, is_rag)
+        session_service.join(sid, room_id, user_name, npc_role, lang, personality, is_rag, success_keyword)
 
         emit('room_joined', {'room_id': room_id})
         emit('system_message', {'message': f'{user_name} 加入了聊天室'}, room=room_id, include_self=False)
@@ -92,6 +93,7 @@ def _generate_npc_reply(socketio, room_id, message):
             personality=session.personality,
             is_rag=session.is_rag,
             history=history,
+            success_keyword=session.success_keyword,
         )
     except Exception as e:
         socketio.emit('error', {'message': f'NPC generation failed: {e}'}, room=room_id)

@@ -25,12 +25,17 @@ def get_role_features(npc_role):
     return roles_config.get(npc_role, {})
 
 
-def ask_npc(query, lang, npc_role, personality, is_rag, history=None):
+def ask_npc(query, lang, npc_role, personality, is_rag, history=None, success_keyword=None):
     """Translate query, build the NPC prompt (with optional conversation
     history) and run it through the shared RAG engine.
 
     `history` is a list of {"role": "user"|"npc", "sender": str, "content": str}
     dicts, oldest first, not including the current `query`.
+
+    `success_keyword`, if set, tells the NPC (via the prompt) to judge whether
+    the player's message satisfies it and say a fixed phrase when it does, so
+    the client can detect "the player got it right" from the NPC's own reply
+    instead of pattern-matching the player's raw message.
     """
     translator = Translate()
     chi_query = translator.translate(query, "zh_TW")
@@ -60,6 +65,7 @@ def ask_npc(query, lang, npc_role, personality, is_rag, history=None):
         'personality': personality,
         'is_rag': is_rag,
         'history': history or [],
+        'success_keyword': success_keyword,
     }
 
     engine = _get_engine()
