@@ -30,13 +30,14 @@ import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-file_handler = logging.FileHandler('llama_index.log')
-file_handler.setLevel(logging.DEBUG)
+if not logger.handlers:
+    file_handler = logging.FileHandler('llama_index.log')
+    file_handler.setLevel(logging.DEBUG)
 
-formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-file_handler.setFormatter(formatter)
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    file_handler.setFormatter(formatter)
 
-logger.addHandler(file_handler)
+    logger.addHandler(file_handler)
 
 class LLaMAIndexRAG(RAGInterface):
     def __init__(self):
@@ -148,11 +149,40 @@ class LLaMAIndexRAG(RAGInterface):
     
     def generate_response(self, question):
         pass
-    
+
+    @staticmethod
+    def _format_success_condition(success_keyword):
+        if not success_keyword:
+            return ""
+        return (
+            "# 過關判定 \n"
+            f"如果玩家的回答符合或提到了以下條件：『{success_keyword}』，代表玩家答對了，"
+            "請在你的回覆中明確包含『答對了！』來稱讚玩家；\n"
+            "如果玩家還沒有給出符合條件的答案，請不要出現『答對了！』這句話，"
+            "並用符合你身份與個性的方式引導玩家繼續思考，不要直接說出答案。\n\n"
+        )
+
+    @staticmethod
+    def _format_history(history, npc_role):
+        if not history:
+            return ""
+        lines = []
+        for turn in history:
+            speaker = npc_role if turn.get('role') == 'npc' else turn.get('sender', '使用者')
+            lines.append(f"{speaker}：{turn.get('content', '')}")
+        return (
+            "以下是先前的對話紀錄，請將其視為上下文，讓回答與對話保持連貫：\n"
+            "---------------------\n"
+            + "\n".join(lines) +
+            "\n---------------------\n\n"
+        )
+
     def generate_response_with_retrieval(self, query_info):
         personality_type = query_info['personality']
         personality_prompt = get_personality_prompt(personality_type)
         is_rag = query_info['is_rag']
+        history_text = self._format_history(query_info.get('history'), query_info['npc_role'])
+        success_condition_text = self._format_success_condition(query_info.get('success_keyword'))
 
         qa_prompt_str = ""
         if query_info['npc_role'] == "博物館導覽員":
@@ -193,6 +223,8 @@ class LLaMAIndexRAG(RAGInterface):
                 "根據以上信息與你的個人資訊，請回答以下問題。\n"
                 # "回答的內容不要超過50個字。\n"
 
+                f"{history_text}"
+                f"{success_condition_text}"
                 "問題：{query_str}\n"
 
                 f"對方可能為外國人，所以請用'{query_info['target_lang']}'的語言回答\n"
@@ -220,6 +252,8 @@ class LLaMAIndexRAG(RAGInterface):
 
                     "根據以上信息與你的個人資訊，請回答以下問題。\n"
                     "\n"
+                    f"{history_text}"
+                    f"{success_condition_text}"
                     "# 問題： \n"
                     "{query_str} \n"
 
@@ -240,6 +274,8 @@ class LLaMAIndexRAG(RAGInterface):
                     "根據以上信息與你的個人資訊，請回答以下問題。\n"
                     "使用繁體中文、白話文。\n"
 
+                    f"{history_text}"
+                    f"{success_condition_text}"
                     f"問題：{query_info['query']}\n"
 
                     # f"對方可能為外國人，所以請將你的回答翻譯成'{query_info['target_lang']}'\n"
