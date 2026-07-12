@@ -67,6 +67,20 @@ def register_socket_events(socketio):
 
         socketio.start_background_task(_generate_npc_reply, socketio, room_id, message)
 
+    @socketio.on('story_prompt')
+    def handle_story_prompt(data):
+        data = data or {}
+        sid = request.sid
+        room_id = data.get('room_id')
+        npc_role = data.get('npc_role', '博物館導覽員')
+        prompt = (data.get('prompt') or '').strip()
+
+        if not room_id or not prompt:
+            emit('error', {'message': 'room_id and prompt are required'})
+            return
+
+        socketio.start_background_task(_generate_story_line, socketio, sid, room_id, npc_role, prompt)
+
 
 def _leave_current_room(sid, notify_self):
     room_id = session_service.leave(sid)
@@ -102,3 +116,29 @@ def _generate_npc_reply(socketio, room_id, message):
     response_text = result['response']
     session_service.add_message(room_id, 'npc', session.npc_role, response_text)
     socketio.emit('npc_response', {'npc_role': session.npc_role, 'response': response_text}, room=room_id)
+
+
+def _generate_story_line(socketio, sid, room_id, npc_role, prompt):
+    # No one ever "joins" a story-mode room (StoryPromptManager never sends a "join"
+    # event), so the reply goes straight back to the requester's own sid instead of
+    # being broadcast to a socket.io room nobody is a member of.
+    session_service.ensure_room(room_id, npc_role)
+    session_service.add_message(room_id, 'user', 'director', prompt)
+    history = session_service.get_history(room_id, exclude_last=True)
+
+    try:
+        result = ask_npc(
+            query=prompt,
+            lang='zh-TW',
+            npc_role=npc_role,
+            personality='',
+            is_rag=True,
+            history=history,
+        )
+    except Exception as e:
+        socketio.emit('error', {'message': f'Story line generation failed: {e}'}, room=sid)
+        return
+
+    response_text = result['response']
+    session_service.add_message(room_id, 'npc', npc_role, response_text)
+    socketio.emit('story_response', {'npc_role': npc_role, 'response': response_text}, room=sid)

@@ -19,8 +19,13 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Make port 5000 available to the world outside this container
 EXPOSE 5050
 
-# Run main.py when the container launches
-CMD ["python", "main.py"]
+# socketio.run() (i.e. "python main.py") uses Werkzeug's dev server, which
+# Flask-SocketIO's own docs say isn't reliable for real WebSocket traffic
+# (causes intermittent "write() before start_response" errors on upgrade).
+# Gunicorn's threaded worker + simple-websocket is the documented production
+# setup for async_mode="threading". Only 1 worker is supported here since
+# session_service/the RAG engine singleton live in this process's memory.
+CMD ["gunicorn", "-w", "1", "--threads", "100", "-b", "0.0.0.0:5050", "main:app"]
 
 # COMMAND
 # docker build -t aibackend .

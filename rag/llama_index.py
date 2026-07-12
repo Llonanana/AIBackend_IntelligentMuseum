@@ -30,13 +30,14 @@ import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-file_handler = logging.FileHandler('llama_index.log')
-file_handler.setLevel(logging.DEBUG)
+if not logger.handlers:
+    file_handler = logging.FileHandler('llama_index.log')
+    file_handler.setLevel(logging.DEBUG)
 
-formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-file_handler.setFormatter(formatter)
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    file_handler.setFormatter(formatter)
 
-logger.addHandler(file_handler)
+    logger.addHandler(file_handler)
 
 class LLaMAIndexRAG(RAGInterface):
     def __init__(self):

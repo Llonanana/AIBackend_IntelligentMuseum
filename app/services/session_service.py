@@ -44,6 +44,20 @@ class SessionService:
             self._sid_to_room[sid] = room_id
             return session
 
+    def ensure_room(self, room_id, npc_role, personality='', lang='zh-TW', is_rag=True):
+        """Get or create a room's session without any socket membership.
+
+        Used by one-shot flows (e.g. story mode) that ask a question and want
+        the reply routed straight back to them, rather than joining/leaving a
+        room the way live chat does.
+        """
+        with self._lock:
+            session = self._rooms.get(room_id)
+            if session is None:
+                session = ChatSession(room_id, npc_role, personality, lang, is_rag)
+                self._rooms[room_id] = session
+            return session
+
     def leave(self, sid):
         """Remove sid from whatever room it's in. Returns the room_id it left, or None."""
         with self._lock:
