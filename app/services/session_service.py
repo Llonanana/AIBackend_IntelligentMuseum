@@ -5,13 +5,14 @@ import time
 class ChatSession:
     """Conversation state for a single chat room (may hold multiple members)."""
 
-    def __init__(self, room_id, npc_role, personality, lang, is_rag, success_keyword=None):
+    def __init__(self, room_id, npc_role, personality, lang, is_rag, success_keyword=None, answer_key=None):
         self.room_id = room_id
         self.npc_role = npc_role
         self.personality = personality
         self.lang = lang
         self.is_rag = is_rag
         self.success_keyword = success_keyword  # LLM-judged story-mode success condition, if any
+        self.answer_key = answer_key  # correct-answer content/judging criteria backing success_keyword, if any
         self.members = {}  # sid -> user_name
         self.history = []  # [{"role": "user"|"npc", "sender": str, "content": str}]
         self.created_at = time.time()
@@ -34,12 +35,18 @@ class SessionService:
         self._lock = threading.Lock()
         self.history_limit = history_limit
 
-    def join(self, sid, room_id, user_name, npc_role, lang, personality, is_rag, success_keyword=None):
+    def join(self, sid, room_id, user_name, npc_role, lang, personality, is_rag, success_keyword=None, answer_key=None, opening_line=None):
         with self._lock:
             session = self._rooms.get(room_id)
             if session is None:
-                session = ChatSession(room_id, npc_role, personality, lang, is_rag, success_keyword)
+                session = ChatSession(room_id, npc_role, personality, lang, is_rag, success_keyword, answer_key)
                 self._rooms[room_id] = session
+                # Seed the room's history with the NPC's own opening line (e.g. the riddle
+                # it just asked in a different, isolated story-mode room) so this fresh
+                # session isn't blank — the NPC "remembers" it via the normal history
+                # mechanism instead of needing a separate prompt block.
+                if opening_line:
+                    session.add_message('npc', npc_role, opening_line)
             session.members[sid] = user_name
             self._sid_to_room[sid] = room_id
             return session

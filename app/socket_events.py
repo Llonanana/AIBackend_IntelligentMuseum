@@ -34,9 +34,12 @@ def register_socket_events(socketio):
         personality = data.get('personality', '')
         is_rag = data.get('is_rag', True)
         success_keyword = data.get('success_keyword') or None
+        answer_key = data.get('answer_key') or None
+        opening_line = data.get('opening_line') or None
+        print(f"[socket] join room_id={room_id} npc_role={npc_role} success_keyword={success_keyword!r} answer_key={answer_key!r} opening_line={opening_line!r}")
 
         join_room(room_id)
-        session_service.join(sid, room_id, user_name, npc_role, lang, personality, is_rag, success_keyword)
+        session_service.join(sid, room_id, user_name, npc_role, lang, personality, is_rag, success_keyword, answer_key, opening_line)
 
         emit('room_joined', {'room_id': room_id})
         emit('system_message', {'message': f'{user_name} 加入了聊天室'}, room=room_id, include_self=False)
@@ -44,6 +47,16 @@ def register_socket_events(socketio):
     @socketio.on('leave')
     def handle_leave():
         _leave_current_room(request.sid, notify_self=True)
+
+    @socketio.on('get_history')
+    def handle_get_history(data=None):
+        sid = request.sid
+        session = session_service.get_session_by_sid(sid)
+        if session is None:
+            emit('error', {'message': 'You are not in a room. Send "join" first.'})
+            return
+
+        emit('chat_history', {'room_id': session.room_id, 'history': session_service.get_history(session.room_id)})
 
     @socketio.on('send_chat_message')
     def handle_send_chat_message(data):
@@ -108,6 +121,7 @@ def _generate_npc_reply(socketio, room_id, message):
             is_rag=session.is_rag,
             history=history,
             success_keyword=session.success_keyword,
+            answer_key=session.answer_key,
         )
     except Exception as e:
         socketio.emit('error', {'message': f'NPC generation failed: {e}'}, room=room_id)

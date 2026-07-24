@@ -16,6 +16,7 @@ from llama_index.core.retrievers import VectorIndexRetriever
 from llama_index.core.query_engine import RetrieverQueryEngine
 from llama_index.core.postprocessor import SimilarityPostprocessor
 from llama_index.core import get_response_synthesizer, PromptTemplate
+from llama_index.core.vector_stores.types import MetadataFilters, MetadataFilter
 
 import os
 from app.services.translate_service import Translate
@@ -50,8 +51,9 @@ class LLaMAIndexRAG(RAGInterface):
         Settings.embed_model = OpenAIEmbedding() 
         
         npc_map = {
-            "清_瓶_青瓷紙槌瓶.txt": "乾隆帝(愛新覺羅·弘曆)",
-            "宋_碗_青瓷蓮花式溫碗.txt": "宋徽宗(趙佶)",
+            # "清_瓶_青瓷紙槌瓶.txt": "乾隆帝(愛新覺羅·弘曆)",
+            # "宋_碗_青瓷蓮花式溫碗.txt": "宋徽宗(趙佶)",
+            "宋_碗_青瓷蓮花式溫碗.txt": "乾隆帝(愛新覺羅·弘曆)",
         }
         
         # Load data
@@ -90,6 +92,10 @@ class LLaMAIndexRAG(RAGInterface):
         
         # Construct vector store
         index_name = "Museum_index"
+        # 每次啟動都用 assets/ 底下的文件重新完整建庫，
+        # 所以先清掉舊 collection，避免不同版本 npc_map 的過期資料一直疊加
+        if self.client.collections.exists(index_name):
+            self.client.collections.delete(index_name)
         vector_store = WeaviateVectorStore(
             weaviate_client = self.client, 
             index_name = index_name
@@ -118,9 +124,10 @@ class LLaMAIndexRAG(RAGInterface):
         retriever = VectorIndexRetriever(
             index=index,
             similarity_top_k=3,
-            # 如果用 WeaviateVectorStore，可以在 query kwargs 加 filter
-            # 這裡示範 filter 依 NPC
-            search_kwargs={"where": {"path": ["npc"], "operator": "Equal", "valueText": "中國古代官員"}}
+            # 依 NPC 過濾檢索結果
+            filters=MetadataFilters(
+                filters=[MetadataFilter(key="npc", value="古代中國官員")]
+            ),
         )
         
         # configure response synthesizer
@@ -151,15 +158,21 @@ class LLaMAIndexRAG(RAGInterface):
         pass
 
     @staticmethod
-    def _format_success_condition(success_keyword):
+    def _format_success_condition(success_keyword, answer_key=None):
         if not success_keyword:
             return ""
+        answer_block = (
+            "這一題實際的正確答案內容如下，請以此為判斷依據，並視為你自己真實知道的事：\n"
+            f"{answer_key}\n\n"
+            if answer_key else ""
+        )
         return (
             "# 過關判定 \n"
-            f"如果玩家的回答符合或提到了以下條件：『{success_keyword}』，代表玩家答對了，"
-            "請在你的回覆中明確包含『答對了！』來稱讚玩家；\n"
-            "如果玩家還沒有給出符合條件的答案，請不要出現『答對了！』這句話，"
-            "並用符合你身份與個性的方式引導玩家繼續思考，不要直接說出答案。\n\n"
+            f"{answer_block}"
+            "請依上述內容判斷玩家的回覆是否符合或接近正確答案，\n"
+            f"如果玩家給出了符合條件的答案，請固定回覆『{success_keyword}』，不要新增或減少文字或句子。"
+            f"如果玩家還沒有給出符合條件的答案，請不要出現『{success_keyword}』這句話，"
+            "並用符合你身份與個性的方式引導玩家繼續思考，絕對不可以直接說出答案。\n\n"
         )
 
     @staticmethod
@@ -182,7 +195,10 @@ class LLaMAIndexRAG(RAGInterface):
         personality_prompt = get_personality_prompt(personality_type)
         is_rag = query_info['is_rag']
         history_text = self._format_history(query_info.get('history'), query_info['npc_role'])
-        success_condition_text = self._format_success_condition(query_info.get('success_keyword'))
+        success_condition_text = self._format_success_condition(
+            query_info.get('success_keyword'),
+            query_info.get('answer_key'),
+        )
 
         qa_prompt_str = ""
         if query_info['npc_role'] == "博物館導覽員":
@@ -199,18 +215,20 @@ class LLaMAIndexRAG(RAGInterface):
 
                 "以下是這個展覽的資訊："
                 "---------------------\n"
-                "這個展覽主要是三個中國古代的武器展，主要有三個朝代：春秋戰國、宋朝與明朝"
-                "三個展區各自有NPC，分別是：白起、岳飛與劉綎，每位NPC都會介紹各自朝代的武器"
+                # "這個展覽主要是三個中國古代的武器展，主要有三個朝代：春秋戰國、宋朝與明朝"
+                # "三個展區各自有NPC，分別是：白起、岳飛與劉綎，每位NPC都會介紹各自朝代的武器"
+                "這個展覽主要是介紹來自中國北宋朝的青瓷汝窯文物-青瓷蓮花式溫碗，這個展覽的NPC是乾隆帝(愛新覺羅·弘曆)，他會介紹這個文物的歷史背景、製作工藝與文化意義。"
                 "本展區使用混合實境與人工智慧技術，期望帶給觀展者全新的體驗並提升學習效果"
                 "---------------------\n"
 
-                "以下是展覽路線：本展覽按照朝代成環形路線，分別是：春秋戰國、宋朝與明朝"
+                # "以下是展覽路線：本展覽按照朝代成環形路線，分別是：春秋戰國、宋朝與明朝"
 
                 "以下是展覽的武器："
                 "---------------------\n"
-                "春秋戰國：秦國弓弩、吳王夫差矛、越王勾踐劍"
-                "宋朝：朴刀、毒藥菸球、神臂弓"
-                "明朝：雁翎刀、鐵殼地雷、鳥銃"
+                # "春秋戰國：秦國弓弩、吳王夫差矛、越王勾踐劍"
+                # "宋朝：朴刀、毒藥菸球、神臂弓"
+                # "明朝：雁翎刀、鐵殼地雷、鳥銃"
+                "北宋朝：青瓷蓮花式溫碗"
                 "---------------------\n"
 
                 "以下是展覽時間：早上九點到下午五點"
@@ -319,10 +337,10 @@ class LLaMAIndexRAG(RAGInterface):
         logger.info(f"Start of Processing "+"="*10)
         # Timing retrieval
         if is_rag:
-            # 動態更新 search_kwargs
-            self.query_engine.retriever.search_kwargs = {
-                "where": {"path": ["npc"], "operator": "Equal", "valueText": query_info['npc_role']}
-            }            
+            # 動態更新 filter，依當前 NPC 過濾檢索結果
+            self.query_engine.retriever._filters = MetadataFilters(
+                filters=[MetadataFilter(key="npc", value=query_info['npc_role'])]
+            )
             retrieval_start_time = time.time()
             retrieved_nodes = self.query_engine.retriever.retrieve(query_info['query'])
             retrieval_end_time = time.time()
