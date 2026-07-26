@@ -81,6 +81,9 @@
     <label>Opening Line <small style="color:#666">(模擬劇情聊天室裡 NPC 已經說過的謎題台詞，種進這個新房間的歷史紀錄第一筆)</small></label>
     <textarea id="ws-opening-line" placeholder="e.g. 朕當年也曾在這碗底題過一首詩，落款只留了幾個字，沒寫年號——你們倒是算算，朕是何時題下這首詩的？"></textarea>
 
+    <label>Hint <small style="color:#666">(玩家答不出來時 NPC 可自行判斷時機拿來引導的線索，不會直接唸給玩家聽)</small></label>
+    <textarea id="ws-hint" placeholder="e.g. 題詩的季節在詩句裡就有提到，仔細看看「仲春」是哪個月"></textarea>
+
     <button onclick="wsConnect()">Connect</button>
     <button class="danger" onclick="wsDisconnect()">Disconnect</button>
 
@@ -183,6 +186,7 @@
       success_keyword: document.getElementById('ws-success-keyword').value.trim() || undefined,
       answer_key: document.getElementById('ws-answer-key').value.trim() || undefined,
       opening_line: document.getElementById('ws-opening-line').value.trim() || undefined,
+      hint: document.getElementById('ws-hint').value.trim() || undefined,
     };
     logOut('join', data);
     socket.emit('join', data);
