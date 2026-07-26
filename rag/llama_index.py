@@ -158,7 +158,7 @@ class LLaMAIndexRAG(RAGInterface):
         pass
 
     @staticmethod
-    def _format_success_condition(success_keyword, answer_key=None):
+    def _format_success_condition(success_keyword, answer_key=None, hint=None):
         if not success_keyword:
             return ""
         answer_block = (
@@ -166,13 +166,22 @@ class LLaMAIndexRAG(RAGInterface):
             f"{answer_key}\n\n"
             if answer_key else ""
         )
+        hint_block = (
+            "如果根據對話紀錄判斷玩家已經卡住、多次答不出符合條件的答案，"
+            "你可以參考以下提示，用符合你身份與個性的方式自然地引導玩家往正確方向思考。"
+            "這個提示是來當你引導時的範例台詞，但不能因此直接說出正確答案：\n"
+            f"{hint}\n\n"
+            if hint else ""
+        )
         return (
             "# 過關判定 \n"
             f"{answer_block}"
+            f"{hint_block}"
             "請依上述內容判斷玩家的回覆是否符合或接近正確答案，\n"
             f"如果玩家給出了符合條件的答案，請固定回覆『{success_keyword}』，不要新增或減少文字或句子。"
             f"如果玩家還沒有給出符合條件的答案，請不要出現『{success_keyword}』這句話，"
-            "並用符合你身份與個性的方式引導玩家繼續思考，絕對不可以直接說出答案。\n\n"
+            "並用符合你身份與個性的方式引導玩家繼續思考，絕對不可以直接說出答案。\n"
+            "如果玩家給出接近正解的答案，只能告訴他想法接近了並鼓勵他們，或是提出之前的提示，但絕對不能說出正確答案\n\n"
         )
 
     @staticmethod
@@ -198,6 +207,7 @@ class LLaMAIndexRAG(RAGInterface):
         success_condition_text = self._format_success_condition(
             query_info.get('success_keyword'),
             query_info.get('answer_key'),
+            query_info.get('hint'),
         )
 
         qa_prompt_str = ""

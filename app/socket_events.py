@@ -36,10 +36,11 @@ def register_socket_events(socketio):
         success_keyword = data.get('success_keyword') or None
         answer_key = data.get('answer_key') or None
         opening_line = data.get('opening_line') or None
-        print(f"[socket] join room_id={room_id} npc_role={npc_role} success_keyword={success_keyword!r} answer_key={answer_key!r} opening_line={opening_line!r}")
+        hint = data.get('hint') or None
+        print(f"[socket] join room_id={room_id} npc_role={npc_role} success_keyword={success_keyword!r} answer_key={answer_key!r} opening_line={opening_line!r} hint={hint!r}")
 
         join_room(room_id)
-        session_service.join(sid, room_id, user_name, npc_role, lang, personality, is_rag, success_keyword, answer_key, opening_line)
+        session_service.join(sid, room_id, user_name, npc_role, lang, personality, is_rag, success_keyword, answer_key, opening_line, hint)
 
         emit('room_joined', {'room_id': room_id})
         emit('system_message', {'message': f'{user_name} 加入了聊天室'}, room=room_id, include_self=False)
@@ -122,6 +123,7 @@ def _generate_npc_reply(socketio, room_id, message):
             history=history,
             success_keyword=session.success_keyword,
             answer_key=session.answer_key,
+            hint=session.hint,
         )
     except Exception as e:
         socketio.emit('error', {'message': f'NPC generation failed: {e}'}, room=room_id)
