@@ -25,7 +25,7 @@ def get_role_features(npc_role):
     return roles_config.get(npc_role, {})
 
 
-def ask_npc(query, lang, npc_role, personality, is_rag, history=None, success_keyword=None, answer_key=None):
+def ask_npc(query, lang, npc_role, personality, is_rag, history=None, success_keyword=None, answer_key=None, hint=None):
     """Translate query, build the NPC prompt (with optional conversation
     history) and run it through the shared RAG engine.
 
@@ -41,6 +41,11 @@ def ask_npc(query, lang, npc_role, personality, is_rag, history=None, success_ke
     criteria for `success_keyword` — without it the NPC has no basis to judge
     correctness beyond its own background/RAG context, and can't answer
     follow-up questions about the answer's details either.
+
+    `hint`, if set, is a nudge the NPC may draw on — at its own judgement of
+    timing, from the conversation history — if the player seems stuck. It is
+    never shown to the player verbatim and must not be treated as permission
+    to reveal `answer_key` outright.
     """
     translator = Translate()
     chi_query = translator.translate(query, "zh_TW")
@@ -72,6 +77,7 @@ def ask_npc(query, lang, npc_role, personality, is_rag, history=None, success_ke
         'history': history or [],
         'success_keyword': success_keyword,
         'answer_key': answer_key,
+        'hint': hint,
     }
 
     engine = _get_engine()
