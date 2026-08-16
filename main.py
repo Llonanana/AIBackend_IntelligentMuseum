@@ -28,7 +28,10 @@ debug_mode = os.environ.get('FLASK_DEBUG', 'False') == 'True'
 
 # cors_allowed_origins="*": the Unity client connects directly over WebSocket
 # (no browser), so there's no Origin to allow-list against.
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
+# ping_timeout=60: default (20s) is shorter than RAG/LLM generation can take
+# (observed 20-25s+ for story lines), so the client got dropped as "dead" right
+# as its reply was ready to send, and the reply went nowhere.
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading", ping_timeout=60, ping_interval=25)
 register_socket_events(socketio)
 
 @app.route("/")

@@ -1,0 +1,213 @@
+{
+  "RG": [
+    {
+      "file": "RG_RG160_710_1.jpg",
+      "code": 160,
+      "gapAngleDeg": 15,
+      "direction": "N",
+      "hueSeparation": 74.7
+    },
+    {
+      "file": "RG_RG160_710_2.jpg",
+      "code": 160,
+      "gapAngleDeg": 175,
+      "direction": "S",
+      "hueSeparation": 74.6
+    },
+    {
+      "file": "RG_RG180_710_1.jpg",
+      "code": 180,
+      "gapAngleDeg": 125,
+      "direction": "SE",
+      "hueSeparation": 79.8
+    },
+    {
+      "file": "RG_RG180_710_2.jpg",
+      "code": 180,
+      "gapAngleDeg": 215,
+      "direction": "SW",
+      "hueSeparation": 80.1
+    },
+    {
+      "file": "RG_RG200_710_1.jpg",
+      "code": 200,
+      "gapAngleDeg": 235,
+      "direction": "SW",
+      "hueSeparation": 85.2
+    },
+    {
+      "file": "RG_RG200_710_2.jpg",
+      "code": 200,
+      "gapAngleDeg": 45,
+      "direction": "NE",
+      "hueSeparation": 85.1
+    },
+    {
+      "file": "RG_RG220_710_1.jpg",
+      "code": 220,
+      "gapAngleDeg": 135,
+      "direction": "SE",
+      "hueSeparation": 89.7
+    },
+    {
+      "file": "RG_RG220_710_2.jpg",
+      "code": 220,
+      "gapAngleDeg": 315,
+      "direction": "NW",
+      "hueSeparation": 89.8
+    },
+    {
+      "file": "RG_RG240_710_1.jpg",
+      "code": 240,
+      "gapAngleDeg": 15,
+      "direction": "N",
+      "hueSeparation": 93.9
+    },
+    {
+      "file": "RG_RG240_710_2.jpg",
+      "code": 240,
+      "gapAngleDeg": 185,
+      "direction": "S",
+      "hueSeparation": 93.9
+    },
+    {
+      "file": "RG_RG260_710_1.jpg",
+      "code": 260,
+      "gapAngleDeg": 175,
+      "direction": "S",
+      "hueSeparation": 98.1
+    },
+    {
+      "file": "RG_RG260_710_2.jpg",
+      "code": 260,
+      "gapAngleDeg": 265,
+      "direction": "W",
+      "hueSeparation": 98.1
+    },
+    {
+      "file": "RG_RG280_710_1.jpg",
+      "code": 280,
+      "gapAngleDeg": 95,
+      "direction": "E",
+      "hueSeparation": 102.2
+    },
+    {
+      "file": "RG_RG280_710_2.jpg",
+      "code": 280,
+      "gapAngleDeg": 175,
+      "direction": "S",
+      "hueSeparation": 102.0
+    },
+    {
+      "file": "RG_RG300_710_1.jpg",
+      "code": 300,
+      "gapAngleDeg": 265,
+      "direction": "W",
+      "hueSeparation": 106.5
+    },
+    {
+      "file": "RG_RG300_710_2.jpg",
+      "code": 300,
+      "gapAngleDeg": 265,
+      "direction": "W",
+      "hueSeparation": 106.5
+    }
+  ],
+  "P": [
+    {
+      "file": "P_P140_710_1.jpg",
+      "code": 140,
+      "gapAngleDeg": 5,
+      "direction": "N",
+      "hueSeparation": 53.2
+    },
+    {
+      "file": "P_P140_710_2.jpg",
+      "code": 140,
+      "gapAngleDeg": 195,
+      "direction": "S",
+      "hueSeparation": 53.2
+    },
+    {
+      "file": "P_P160_710_1.jpg",
+      "code": 160,
+      "gapAngleDeg": 85,
+      "direction": "E",
+      "hueSeparation": 71.4
+    },
+    {
+      "file": "P_P160_710_2.jpg",
+      "code": 160,
+      "gapAngleDeg": 275,
+      "direction": "W",
+      "hueSeparation": 71.5
+    },
+    {
+      "file": "P_P180_710_1.jpg",
+      "code": 180,
+      "gapAngleDeg": 135,
+      "direction": "SE",
+      "hueSeparation": 90.7
+    },
+    {
+      "file": "P_P180_710_2.jpg",
+      "code": 180,
+      "gapAngleDeg": 315,
+      "direction": "NW",
+      "hueSeparation": 90.6
+    },
+    {
+      "file": "P_P200_710_1.jpg",
+      "code": 200,
+      "gapAngleDeg": 235,
+      "direction": "SW",
+      "hueSeparation": 106.4
+    },
+    {
+      "file": "P_P200_710_2.jpg",
+      "code": 200,
+      "gapAngleDeg": 45,
+      "direction": "NE",
+      "hueSeparation": 106.5
+    }
+  ],
+  "D": [
+    {
+      "file": "D_D140_710_1.jpg",
+      "code": 140,
+      "gapAngleDeg": 45,
+      "direction": "NE",
+      "hueSeparation": 68.6
+    },
+    {
+      "file": "D_D140_710_2.jpg",
+      "code": 140,
+      "gapAngleDeg": 235,
+      "direction": "SW",
+      "hueSeparation": 68.9
+    }
+  ],
+  "Tri": [
+    {
+      "file": "Tri_T01.jpg",
+      "code": 1,
+      "gapAngleDeg": 135,
+      "direction": "SE",
+      "hueSeparation": 46.3
+    },
+    {
+      "file": "Tri_T02.jpg",
+      "code": 2,
+      "gapAngleDeg": 225,
+      "direction": "SW",
+      "hueSeparation": 41.3
+    },
+    {
+      "file": "Tri_T03.jpg",
+      "code": 3,
+      "gapAngleDeg": 265,
+      "direction": "W",
+      "hueSeparation": 35.9
+    }
+  ]
+}
