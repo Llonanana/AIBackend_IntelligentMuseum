@@ -1,0 +1,12 @@
+.git
+.gitignore
+venv
+__pycache__
+*.pyc
+.env
+google-cert.json
+store
+*.log
+test.html
+colorblind_test.html
+README.md

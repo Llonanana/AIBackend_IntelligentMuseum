@@ -94,20 +94,6 @@
     <button onclick="wsLeave()">Leave Room</button>
   </div>
 
-  <!-- Group Photo Email Panel -->
-  <div class="panel">
-    <strong>WebSocket — Group Photo Email</strong>
-    <small style="color:#666">（要先用左邊的 Connect 連上，這裡共用同一條 socket）</small>
-
-    <label>Recipient Email</label>
-    <input id="gp-email" placeholder="you@example.com">
-
-    <label>Photo File <small style="color:#666">(隨便挑一張圖，模擬 HoloLens 存下來的合照)</small></label>
-    <input id="gp-file" type="file" accept="image/*">
-
-    <button id="gp-send-btn" onclick="sendGroupPhoto()">Send Group Photo</button>
-  </div>
-
   <!-- REST Panel -->
   <div class="panel">
     <strong>REST API</strong>
@@ -188,43 +174,6 @@
     socket.on('npc_response',   (d)  => logIn('npc_response', d));
     socket.on('chat_history',   (d)  => logIn('chat_history', d));
     socket.on('error',          (d)  => logErr('server error: ' + JSON.stringify(d)));
-
-    socket.on('photo_email_sent',   (d) => logIn('photo_email_sent', d));
-    socket.on('photo_email_failed', (d) => logErr('photo_email_failed: ' + JSON.stringify(d)));
-  }
-
-  // ── Group Photo Email ───────────────────────────────────────────────────────
-  function sendGroupPhoto() {
-    if (!socket || !socket.connected) { logErr('Connect first (left panel)'); return; }
-
-    const btn = document.getElementById('gp-send-btn');
-    if (btn.disabled) return; // already sending — ignore double/triple clicks
-
-    const email = document.getElementById('gp-email').value.trim();
-    const fileInput = document.getElementById('gp-file');
-    const file = fileInput.files[0];
-    if (!email || !file) { logErr('Need both an email and a photo file'); return; }
-
-    btn.disabled = true;
-    btn.textContent = 'Sending…';
-    // Re-enable once the backend replies either way — success or failure both
-    // land here since both listeners call this (see wsConnect()'s socket.on
-    // handlers for photo_email_sent / photo_email_failed).
-    const reEnable = () => { btn.disabled = false; btn.textContent = 'Send Group Photo'; };
-    socket.once('photo_email_sent', reEnable);
-    socket.once('photo_email_failed', reEnable);
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      // reader.result is "data:image/png;base64,AAAA..." — strip the data: URL prefix,
-      // the backend only wants the raw base64 payload (see email_service.py).
-      const photoBase64 = reader.result.split(',')[1];
-      const data = { email, photo_base64: photoBase64, file_name: file.name };
-      logOut('send_group_photo', { email, file_name: file.name, photo_base64: `<${photoBase64.length} chars>` });
-      socket.emit('send_group_photo', data);
-    };
-    reader.onerror = () => { logErr('Failed to read file'); reEnable(); };
-    reader.readAsDataURL(file);
   }
 
   function wsJoin() {

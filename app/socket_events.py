@@ -3,7 +3,6 @@ from flask_socketio import join_room, leave_room, emit
 
 from app.services.session_service import session_service
 from app.services.npc_service import ask_npc
-from app.services.email_service import email_service
 
 
 def register_socket_events(socketio):
@@ -96,23 +95,6 @@ def register_socket_events(socketio):
 
         socketio.start_background_task(_generate_story_line, socketio, sid, room_id, npc_role, prompt)
 
-    # GroupPhotoEmailPrompt.cs (Unity) emits this straight after TakeGroupPhoto() saves a
-    # local jpg — no "join"/room involved, same as story_prompt, so the reply goes back to
-    # request.sid rather than being broadcast.
-    @socketio.on('send_group_photo')
-    def handle_send_group_photo(data):
-        data = data or {}
-        sid = request.sid
-        email = (data.get('email') or '').strip()
-        photo_base64 = data.get('photo_base64')
-        file_name = data.get('file_name') or 'group_photo.jpg'
-
-        if not email or not photo_base64:
-            emit('photo_email_failed', {'message': 'email and photo_base64 are required'})
-            return
-
-        socketio.start_background_task(_send_group_photo, socketio, sid, email, photo_base64, file_name)
-
 
 def _leave_current_room(sid, notify_self):
     room_id = session_service.leave(sid)
@@ -150,17 +132,6 @@ def _generate_npc_reply(socketio, room_id, message):
     response_text = result['response']
     session_service.add_message(room_id, 'npc', session.npc_role, response_text)
     socketio.emit('npc_response', {'npc_role': session.npc_role, 'response': response_text}, room=room_id)
-
-
-def _send_group_photo(socketio, sid, email, photo_base64, file_name):
-    try:
-        email_service.send_group_photo(email, photo_base64, file_name)
-    except Exception as e:
-        print(f"[socket] send_group_photo failed: {e}")
-        socketio.emit('photo_email_failed', {'message': str(e)}, room=sid)
-        return
-
-    socketio.emit('photo_email_sent', {}, room=sid)
 
 
 def _generate_story_line(socketio, sid, room_id, npc_role, prompt):
