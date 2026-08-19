@@ -25,7 +25,7 @@ def get_role_features(npc_role):
     return roles_config.get(npc_role, {})
 
 
-def ask_npc(query, lang, npc_role, personality, is_rag, history=None, success_keyword=None, answer_key=None, hint=None):
+def ask_npc(query, lang, npc_role, personality, is_rag, history=None, success_keyword=None, answer_key=None, hint=None, beat_count=1):
     """Translate query, build the NPC prompt (with optional conversation
     history) and run it through the shared RAG engine.
 
@@ -46,6 +46,10 @@ def ask_npc(query, lang, npc_role, personality, is_rag, history=None, success_ke
     timing, from the conversation history — if the player seems stuck. It is
     never shown to the player verbatim and must not be treated as permission
     to reveal `answer_key` outright.
+
+    `beat_count`, if > 1, asks the LLM to split its reply into exactly that
+    many segments (one per pre-authored animation beat on the client side)
+    in a single call instead of one call per segment.
     """
     translator = Translate()
     chi_query = translator.translate(query, "zh_TW")
@@ -78,6 +82,7 @@ def ask_npc(query, lang, npc_role, personality, is_rag, history=None, success_ke
         'success_keyword': success_keyword,
         'answer_key': answer_key,
         'hint': hint,
+        'beat_count': beat_count,
     }
 
     engine = _get_engine()
@@ -89,5 +94,6 @@ def ask_npc(query, lang, npc_role, personality, is_rag, history=None, success_ke
     return {
         'parsed_query': chi_query,
         'response': response.get('response', ''),
+        'segments': response.get('segments', [response.get('response', '')]),
         'metadata': response.get('metadata', {}),
     }

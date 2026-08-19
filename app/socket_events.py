@@ -87,13 +87,13 @@ def register_socket_events(socketio):
         sid = request.sid
         room_id = data.get('room_id')
         npc_role = data.get('npc_role', '博物館導覽員')
-        prompt = (data.get('prompt') or '').strip()
+        prompts = [p.strip() for p in (data.get('prompts') or []) if (p or '').strip()]
 
-        if not room_id or not prompt:
-            emit('error', {'message': 'room_id and prompt are required'})
+        if not room_id or not prompts:
+            emit('error', {'message': 'room_id and prompts are required'})
             return
 
-        socketio.start_background_task(_generate_story_line, socketio, sid, room_id, npc_role, prompt)
+        socketio.start_background_task(_generate_story_line, socketio, sid, room_id, npc_role, prompts)
 
 
 def _leave_current_room(sid, notify_self):
@@ -134,27 +134,39 @@ def _generate_npc_reply(socketio, room_id, message):
     socketio.emit('npc_response', {'npc_role': session.npc_role, 'response': response_text}, room=room_id)
 
 
-def _generate_story_line(socketio, sid, room_id, npc_role, prompt):
+def _generate_story_line(socketio, sid, room_id, npc_role, prompts):
     # No one ever "joins" a story-mode room (StoryPromptManager never sends a "join"
     # event), so the reply goes straight back to the requester's own sid instead of
     # being broadcast to a socket.io room nobody is a member of.
+    beat_count = len(prompts)
+    # Each prompt is a director-authored line for its own animation beat (see
+    # StoryModeManager.RequestDialogueLine); with more than one, they're bundled into a
+    # single numbered-task query so one LLM call answers all of them instead of one call
+    # per beat. ask_npc/generate_response_with_retrieval only ever see one query string,
+    # so the "there are N things to answer" framing lives entirely in this combined text.
+    combined_query = prompts[0] if beat_count <= 1 else "\n".join(
+        f"任務{i + 1}：{p}" for i, p in enumerate(prompts)
+    )
+
     session_service.ensure_room(room_id, npc_role)
-    session_service.add_message(room_id, 'user', 'director', prompt)
+    session_service.add_message(room_id, 'user', 'director', combined_query)
     history = session_service.get_history(room_id, exclude_last=True)
 
     try:
         result = ask_npc(
-            query=prompt,
+            query=combined_query,
             lang='zh-TW',
             npc_role=npc_role,
             personality='',
             is_rag=True,
             history=history,
+            beat_count=beat_count,
         )
     except Exception as e:
         socketio.emit('error', {'message': f'Story line generation failed: {e}'}, room=sid)
         return
 
     response_text = result['response']
+    segments = result['segments']
     session_service.add_message(room_id, 'npc', npc_role, response_text)
-    socketio.emit('story_response', {'npc_role': npc_role, 'response': response_text}, room=sid)
+    socketio.emit('story_response', {'npc_role': npc_role, 'response': response_text, 'segments': segments}, room=sid)

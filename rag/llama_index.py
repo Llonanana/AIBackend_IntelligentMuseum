@@ -18,6 +18,7 @@ from llama_index.core.postprocessor import SimilarityPostprocessor
 from llama_index.core import get_response_synthesizer, PromptTemplate
 from llama_index.core.vector_stores.types import MetadataFilters, MetadataFilter
 
+import json
 import os
 from app.services.translate_service import Translate
 import time
@@ -185,6 +186,42 @@ class LLaMAIndexRAG(RAGInterface):
         )
 
     @staticmethod
+    def _format_beat_instruction(beat_count):
+        if not beat_count or beat_count <= 1:
+            return ""
+        return (
+            "# 分任務輸出格式 \n"
+            f"上面的「問題」依序列出了 {beat_count} 個任務，請針對每個任務個別給出一段回覆，"
+            "各段之間仍要語氣一致、銜接自然，像同一次發言的不同段落。\n"
+            "只能回傳一個 JSON 陣列，陣列裡剛好有這麼多個字串元素，依序對應每個任務的回覆，"
+            "不要有任何其他文字、說明或 markdown 標記，例如：[\"任務1的回覆\", \"任務2的回覆\"]\n\n"
+        )
+
+    @staticmethod
+    def _parse_segments(response_text, beat_count):
+        if not beat_count or beat_count <= 1:
+            return [response_text]
+
+        text = (response_text or "").strip()
+        if text.startswith("```"):
+            text = text.strip("`")
+            if text.lower().startswith("json"):
+                text = text[4:]
+            text = text.strip()
+
+        try:
+            parsed = json.loads(text)
+        except (ValueError, TypeError):
+            return [response_text]
+
+        if not isinstance(parsed, list) or not parsed:
+            return [response_text]
+        if not all(isinstance(s, str) and s.strip() for s in parsed):
+            return [response_text]
+
+        return parsed
+
+    @staticmethod
     def _format_history(history, npc_role):
         if not history:
             return ""
@@ -209,6 +246,8 @@ class LLaMAIndexRAG(RAGInterface):
             query_info.get('answer_key'),
             query_info.get('hint'),
         )
+        beat_count = query_info.get('beat_count', 1)
+        beat_instruction_text = self._format_beat_instruction(beat_count)
 
         qa_prompt_str = ""
         if query_info['npc_role'] == "博物館導覽員":
@@ -253,6 +292,7 @@ class LLaMAIndexRAG(RAGInterface):
 
                 f"{history_text}"
                 f"{success_condition_text}"
+                f"{beat_instruction_text}"
                 "問題：{query_str}\n"
 
                 f"對方可能為外國人，所以請用'{query_info['target_lang']}'的語言回答\n"
@@ -282,6 +322,7 @@ class LLaMAIndexRAG(RAGInterface):
                     "\n"
                     f"{history_text}"
                     f"{success_condition_text}"
+                    f"{beat_instruction_text}"
                     "# 問題： \n"
                     "{query_str} \n"
 
@@ -376,8 +417,13 @@ class LLaMAIndexRAG(RAGInterface):
             response_obj = response  # 這是 LlamaIndex 物件
             response_text = response_obj.response
 
+            segments = self._parse_segments(response_text, beat_count)
+            if len(segments) > 1:
+                response_text = "".join(segments)
+
             response_data = {
                 "response": response_text,
+                "segments": segments,
                 "metadata": metadata_dict,
                 "parsed_query": f"({query_info['npc_role']}-{query_info['dynasty']}){query_info['query']}",
                 "RAG_response_time": retrieval_end_time - retrieval_start_time
